@@ -4417,39 +4417,61 @@ document.body.appendChild(renderer.domElement);
 var scene = new Scene();
 var camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-camera.position.set(0, 100, 600);
+camera.position.set(0, 100, 300);
 scene.add(camera);
 
 var orbit = new OrbitControls(camera, renderer.domElement);
-//orbit.target.set(0, 0, 0)
+orbit.target.set(0, 0, 0);
 orbit.enableZoom = false;
-console.log(orbit);
 
-var addPaper = function addPaper() {
-  // Planebuffergeometry(width, height, widthSegments, heightSegments)
-  var geometry = new PlaneBufferGeometry(210, 297, 1);
-  var material = new MeshBasicMaterial({ color: 0xffff00, side: DoubleSide });
-  var plane = new Mesh(geometry, material);
-  scene.add(plane);
+var createPaper = function createPaper(images) {
+  var paper = new Group();
+  images.map(function (img, idx) {
+    var geometry = new PlaneBufferGeometry(210, 297, 1);
+    var face = new Mesh(geometry, img);
+    if (idx == 1) {
+      face.rotation.set(0, Math.PI, 0);
+    }
+    paper.add(face);
+  });
+  return paper;
 };
 
-addPaper();
+var update = function update() {
+  render();
+  requestAnimationFrame(update);
+};
 
 var render = function render() {
   orbit.update();
   renderer.render(scene, camera);
 };
 
-render();
+var loader = new ImageLoader();
+var images = [];
+var resources = ['/img/front.jpg', '/img/back.jpg'];
 
-/*
-const animate = (obj) => {
-  if (!obj) return
-  requestAnimationFrame(animate)
-  obj.rotation.x += 0.1
-  obj.rotation.y += 0.1
+var count = 0;
 
-  renderer.render(scene, camera)
-}
-animate()
-*/
+var loadImages = function loadImages() {
+  loader.load(resources[count], function (image) {
+    var texture = new CanvasTexture(image);
+    var params = {
+      map: texture,
+      side: FrontSide
+    };
+
+    images.push(new MeshBasicMaterial(params));
+
+    if (images.length != resources.length) {
+      count++;
+      loadImages();
+    } else {
+      var paper = createPaper(images);
+      scene.add(paper);
+    }
+  });
+};
+
+loadImages();
+update();
